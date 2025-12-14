@@ -1,12 +1,40 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { enableScreens } from 'react-native-screens';
+enableScreens();
+import React from 'react';
+import {View, Text, StyleSheet } from 'react-native';
+import {NavigationContainer} from '@react-navigation/native';
+import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
+
+
+const Tab = createBottomTabNavigator();
+
+const CalendarScreen=()=>(
+    <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+        <Text>Map Screen</Text>
+    </View>
+);
+
+const MapScreen=()=> (
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+    <Text>Map Screen</Text>
+    </View>
+);
+
+const NewScreen=()=> (
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+    <Text>New Screen</Text>
+    </View>
+);
 
 export default function App() {
   return (
-    <View style={styles.container}>
-      <Text>I like ReactNative</Text>
-      <StatusBar style="auto" />
-    </View>
+    <NavigationContainer>
+        <Tab.Navigator screenOptions={{ headerShown: false}}>
+            <Tab.Screen name="Calendar" component={CalendarScreen} />
+            <Tab.Screen name="Map" component={MapScreen} />
+            <Tab.Screen name="New" component={NewScreen} />
+        </Tab.Navigator>
+    </NavigationContainer>
   );
 }
 
