@@ -1,80 +1,73 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, View, Button, Switch,  } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
-import { createDrawerNavigator } from '@react-navigation/drawer';
+import { StatusBar } from 'expo-status-bar';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, Text, View, Button, Switch } from 'react-native';
+import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createDrawerNavigator } from '@react-navigation/drawer';
 
 const Tab = createBottomTabNavigator();
 const Drawer = createDrawerNavigator();
 
-const CalendarScreen = () => (
-    <View style={styles.container}>
-        <Text>Calendar Screen</Text>
-    </View>
-);
+export default function App() {
+    const [isDarkTheme, setIsDarkTheme] = useState(false);
 
-const MapScreen = () => (
-    <View style={styles.container}>
-        <Text>Map Screen</Text>
-    </View>
-);
+    const toggleTheme = () => setIsDarkTheme(prev => !prev);
 
-const NewScreen = () => (
-    <View style={styles.container}>
-        <Text>New Screen</Text>
-    </View>
-);
+    // --- Екрани ---
+    const CalendarScreen = () => (
+        <View style={[styles.container, { backgroundColor: isDarkTheme ? '#121212' : '#fff' }]}>
+            <Text style={[styles.text, { color: isDarkTheme ? '#fff' : '#000' }]}>Calendar Screen</Text>
+        </View>
+    );
 
-function BottomTabs() {
-    return (
+    const MapScreen = () => (
+        <View style={[styles.container, { backgroundColor: isDarkTheme ? '#121212' : '#fff' }]}>
+            <Text style={[styles.text, { color: isDarkTheme ? '#fff' : '#000' }]}>Map Screen</Text>
+        </View>
+    );
+
+    const NewScreen = () => (
+        <View style={[styles.container, { backgroundColor: isDarkTheme ? '#121212' : '#fff' }]}>
+            <Text style={[styles.text, { color: isDarkTheme ? '#fff' : '#000' }]}>New Screen</Text>
+        </View>
+    );
+
+    const BottomTabs = () => (
         <Tab.Navigator screenOptions={{ headerShown: false }}>
             <Tab.Screen name="Calendar" component={CalendarScreen} />
             <Tab.Screen name="Map" component={MapScreen} />
             <Tab.Screen name="New" component={NewScreen} />
         </Tab.Navigator>
     );
-}
 
-const ProfileScreen = () => (
-    <View style={styles.container}>
-        <Text>Profile Screen</Text>
-    </View>
-);
+    const ProfileScreen = () => (
+        <View style={[styles.container, { backgroundColor: isDarkTheme ? '#121212' : '#fff' }]}>
+            <Text style={[styles.text, { color: isDarkTheme ? '#fff' : '#000' }]}>Profile Screen</Text>
+        </View>
+    );
 
-const ExitScreen = ({ navigation }) => (
-    <View style={styles.container}>
-        <Text>Exit Screen</Text>
-        <Button title="Go Back" onPress={() => navigation.goBack()} />
-    </View>
-);
+    const ExitScreen = ({ navigation }) => (
+        <View style={[styles.container, { backgroundColor: isDarkTheme ? '#121212' : '#fff' }]}>
+            <Text style={[styles.text, { color: isDarkTheme ? '#fff' : '#000' }]}>Exit Screen</Text>
+            <Button title="Go Back" onPress={() => navigation.goBack()} />
+        </View>
+    );
 
-const SettingsScreen = () => {
-    const [isDarkTheme, setIsDarkTheme] = useState(false);
-    const [language, setLanguage] = useState('EN');
-
-    const toggleTheme = () => setIsDarkTheme(prev => !prev);
-    const switchLanguage = () => setLanguage(prev => (prev === 'EN' ? 'UA' : 'EN'));
-
-    return (
-        <View style={styles.container}>
-            <Text style={{ fontSize: 20, marginBottom: 10 }}>Settings</Text>
+    const SettingsScreen = () => (
+        <View style={[styles.container, { backgroundColor: isDarkTheme ? '#121212' : '#fff' }]}>
+            <Text style={[styles.text, { color: isDarkTheme ? '#fff' : '#000', fontSize: 20, marginBottom: 10 }]}>
+                Settings
+            </Text>
 
             <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 10 }}>
-                <Text>Dark Theme:</Text>
+                <Text style={[styles.text, { color: isDarkTheme ? '#fff' : '#000' }]}>Dark Theme:</Text>
                 <Switch value={isDarkTheme} onValueChange={toggleTheme} />
-            </View>
-
-            <View style={{ marginVertical: 10 }}>
-                <Text>Language: {language}</Text>
-                <Button title="Switch Language" onPress={switchLanguage} />
             </View>
         </View>
     );
-};
 
-export default function App() {
     return (
-        <NavigationContainer>
+        <NavigationContainer theme={isDarkTheme ? DarkTheme : DefaultTheme}>
             <Drawer.Navigator screenOptions={{ headerShown: true }}>
                 <Drawer.Screen name="Home" component={BottomTabs} />
                 <Drawer.Screen name="Profile" component={ProfileScreen} />
@@ -92,4 +85,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  text: {
+    fontSize: 16,
+  }
 });
