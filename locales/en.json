@@ -3,13 +3,16 @@
   "profile": "Profile",
   "settings": "Settings",
   "exit": "Exit",
-  "calendarScreen": "Calendar Screen",
-  "mapScreen": "Map Screen",
+  "calendarScreen": "Calendar",
+  "mapScreen": "Map",
   "newScreen": "New Screen",
-  "profileScreen": "Profile Screen",
-  "exitScreen": "Exit Screen",
+  "profileScreen": "Profile",
+  "exitScreen": "Exit",
   "goBack": "Go Back",
   "darkTheme": "Dark Theme",
   "language": "Language",
-  "switchLanguage": "Switch Language"
+  "switchLanguage": "Switch Language",
+  "takePhoto": "Take photo",
+  "pickImage": "Pick image from gallery",
+  "saveToSQLite": "Save to SQLite"
 }

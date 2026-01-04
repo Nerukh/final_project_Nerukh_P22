@@ -1,32 +1,68 @@
-// i18n/index.js
-import i18next from 'i18next';
-import { initReactI18next } from 'react-i18next';
+import {languages} from "../locales";
+import {getLocales} from 'expo-localization';
+import i18next from "i18next";
+import {initReactI18next} from "react-i18next";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import {retrySymbolicateLogNow} from "react-native/Libraries/LogBox/Data/LogBoxData";
 import * as Localization from 'expo-localization';
-import { languages } from '../locales'; // тут твій файл з перекладами
 
-// Отримуємо мову пристрою без помилки split
-const deviceLocale = typeof Localization.locale === 'string' ? Localization.locale : 'en';
-const deviceLanguage = deviceLocale.split('-')[0]; // напр. 'en', 'uk', 'pl'
+const config = {
+    SUPPORTED_LANGUAGES: Object.keys(languages),
+    DEFAULT_LANGUAGE: 'en',
+    APP_LANGUAGE: 'APP_LANGUAGE',
+}
 
-// Ініціалізація i18next
-i18next.use(initReactI18next).init({
-    resources: languages,
-    lng: deviceLanguage,
-    fallbackLng: 'en',
-    interpolation: {
-        escapeValue: false, // react вже робить екранування
-    },
-});
+const getDeviceLanguage = async () => {
+    try {
+        const locales = await Localization.getLocalesAsync?.() || [];
+        return locales[0]?.languageCode || 'en';
+    } catch (e) {
+        return 'en';
+    }
+};
 
-// Функція зміни мови
+export const initI18n = async () => {
+    const deviceLang = getDeviceLanguage();
+    const initialLang = config.SUPPORTED_LANGUAGES.includes(deviceLang)
+        ? deviceLang
+        : config.DEFAULT_LANGUAGE;
+
+    await i18next
+        .use(initReactI18next)
+        .init({
+            resources: languages,
+            lng: initialLang,
+            fallbackLng: config.DEFAULT_LANGUAGE,
+            interpolation: { escapeValue: false },
+        });
+};
+
 export const changeLanguage = async (lang) => {
-    await i18next.changeLanguage(lang);
-};
+    try {
+        if (!config.SUPPORTED_LANGUAGES.includes(lang)) {
+            throw new Error(`Language ${lang} is not supported`)
+        }
+        await i18next.changeLanguage(lang);
+        await AsyncStorage.setItem(config.APP_LANGUAGE, lang);
+        if (__DEV__) {
+            console.log(`Language changed to: ${lang}`)
+        }
+    } catch (error) {
+        console.error('Failed to change language', error)
+    }
+}
 
-// Функція завантаження мови (для useEffect у App.js)
 export const loadLanguage = async () => {
-    const currentLang = i18next.language || deviceLanguage;
-    await i18next.changeLanguage(currentLang);
-};
+    try {
+        const savedLanguage = await AsyncStorage.getItem(config.APP_LANGUAGE);
 
-export default i18next;
+        if (savedLanguage) {
+            await i18next.changeLanguage(savedLanguage);
+            if (__DEV__) {
+                console.log(`Loaded saved language: ${savedLanguage}`)
+            }
+        }
+    } catch (error) {
+        console.error('Failed to load language', error)
+    }
+}

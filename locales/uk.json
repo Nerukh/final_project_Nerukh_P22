@@ -11,5 +11,8 @@
   "goBack": "Назад",
   "darkTheme": "Темна тема",
   "language": "Мова",
-  "switchLanguage": "Змінити мову"
+  "switchLanguage": "Змінити мову",
+  "takePhoto": "Зробити фото",
+  "pickImage": "Вибрати з галереї",
+  "saveToSQLite": "Зберегти в SQLite"
 }

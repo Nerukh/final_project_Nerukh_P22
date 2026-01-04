@@ -11,5 +11,8 @@
   "goBack": "Wróć",
   "darkTheme": "Ciemny motyw",
   "language": "Język",
-  "switchLanguage": "Zmień język"
+  "switchLanguage": "Zmień język",
+  "takePhoto": "Zrób zdjęcie",
+  "pickImage": "Wybierz z galerii",
+  "saveToSQLite": "Zapisz do SQLite"
 }
