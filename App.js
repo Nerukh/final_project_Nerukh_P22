@@ -42,6 +42,7 @@ const MapScreen = ({ themeColors, t }) => (
 
 function NewScreen({ themeColors, t }) {
     const [image, setImage] = useState(null);
+    const [fileName, setFileName] = useState(null);
     const [list, setList] = useState([]);
 
     useEffect(() => {
@@ -64,17 +65,46 @@ function NewScreen({ themeColors, t }) {
         const { status } = await ImagePicker.requestCameraPermissionsAsync();
         if (status !== 'granted') return;
         const result = await ImagePicker.launchCameraAsync({ allowsEditing: true, aspect: [4,3], quality: 1 });
-        if (!result.canceled) setImage(result.assets[0].uri);
+        if (!result.canceled) {
+            const asset = result.assets[0];
+            setImage(asset.uri);
+            const name = asset.fileName || asset.uri.split('/').pop();
+            setFileName(name);
+        }
     };
 
     const handlePickImage = async () => {
         const { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
         if (status !== 'granted') {
             const { status: newStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-            if (newStatus !== 'granted') return;
+            if (newStatus !== 'granted') {
+                Alert.alert(
+                    'Permission required',
+                    'Sorry, we need gallery permissions to make this work! You can enable it in Settings.',
+                    [
+                        { text: 'Cancel', style: 'cancel' },
+                        { text: 'Open Settings', onPress: () => Linking.openSettings() }
+                    ]
+                );
+                return;
+            }
         }
-        const result = await ImagePicker.launchImageLibraryAsync({ allowsEditing: true, aspect: [4,3], quality: 1, mediaTypes: ImagePicker.MediaType.Images });
-        if (!result.canceled) setImage(result.assets[0].uri);
+
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: false,
+            allowsMultipleSelection: false,
+            aspect: [1, 1],
+            quality: 1,
+        });
+
+        if (!result.canceled) {
+            const asset = result.assets[0];
+            setImage(asset.uri);
+            const name = asset.fileName || asset.uri.split('/').pop();
+            setFileName(name);
+            console.log('Original file name:', name);
+        }
     };
 
     const saveToDB = () => {
@@ -84,10 +114,41 @@ function NewScreen({ themeColors, t }) {
             tx.executeSql(
                 'INSERT INTO violations (imageUri, createdAt) VALUES (?, ?);',
                 [image, date],
-                () => { setImage(null); loadData(); },
+                () => { setImage(null); setFileName(null); loadData(); },
                 (_, error) => { console.log("Insert error", error); return true; }
             );
         });
+    };
+
+
+    const handleUploadImage = async () => {
+        if (!image || !fileName) return;
+
+        const formData = new FormData();
+        const extension = fileName.split('.').pop().toLowerCase();
+        let mimeType = 'image/jpeg';
+        if (extension === 'png') mimeType = 'image/png';
+        else if (extension === 'gif') mimeType = 'image/gif';
+        else if (extension === 'heic') mimeType = 'image/heic';
+        else if (extension === 'webp') mimeType = 'image/webp';
+
+        formData.append('file', { uri: image, name: fileName, type: mimeType });
+        formData.append('upload_preset', 'archive');
+
+        try {
+            const response = await fetch('https://api.cloudinary.com/v1_1/dvf7vqr1s/upload', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+            if (data.secure_url) {
+                console.log('Uploaded image URL:', data.secure_url);
+            } else {
+                console.log('Upload response:', data);
+            }
+        } catch (error) {
+            console.log('Upload error:', error);
+        }
     };
 
     return (
@@ -99,6 +160,8 @@ function NewScreen({ themeColors, t }) {
             <View style={{ height: 10 }} />
             <Button title={t('saveToSQLite')} onPress={saveToDB} />
             {image && <Image source={{ uri: image }} style={styles.image} />}
+            {image && <View style={{ height: 10 }} />}
+            {image && <Button title="Upload to Cloudinary" onPress={handleUploadImage} />}
             <FlatList
                 data={list}
                 keyExtractor={item => item.id.toString()}
@@ -113,6 +176,7 @@ function NewScreen({ themeColors, t }) {
         </View>
     );
 }
+
 
 const ProfileScreen = ({ themeColors, t }) => (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
