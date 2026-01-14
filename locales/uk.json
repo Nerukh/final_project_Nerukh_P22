@@ -14,5 +14,12 @@
   "switchLanguage": "Змінити мову",
   "takePhoto": "Зробити фото",
   "pickImage": "Вибрати з галереї",
-  "saveToSQLite": "Зберегти в SQLite"
+  "saveToSQLite": "Зберегти в SQLite",
+  "addMarker": "Додати маркер",
+  "tapOnMap": "Торкніться карти...",
+  "zoomIn": "Збільшити",
+  "zoomOut": "Зменшити",
+  "markerTitle": "Маркер",
+  "markerDescription": "Широта: {{lat}}, Довгота: {{lng}}",
+  "selectedCoordinates": "Вибрані координати"
 }

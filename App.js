@@ -1,32 +1,19 @@
 import { StatusBar } from 'expo-status-bar';
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, Button, Switch, Alert, Image, Linking, FlatList } from 'react-native';
+import { StyleSheet, Text, View, Button, Switch, Alert, Image, FlatList } from 'react-native';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createDrawerNavigator } from '@react-navigation/drawer';
-import { useTranslation } from 'react-i18next';
-import { changeLanguage, initI18n } from './i18n';
 import * as ImagePicker from 'expo-image-picker';
-import * as SQLite from 'expo-sqlite';
+import * as FileSystem from 'expo-file-system';
+import * as Location from 'expo-location';
+import MapView from "react-native-maps";
+import { createTable, insertUser, fetchUsers } from './database';
+import { useTranslation, initReactI18next } from 'react-i18next';
+import { changeLanguage, initI18n } from './i18n';
 
 const Tab = createBottomTabNavigator();
 const Drawer = createDrawerNavigator();
-const db = SQLite.openDatabase('violations.db');
-
-const initDB = () => {
-    db.transaction(tx => {
-        tx.executeSql(
-            `CREATE TABLE IF NOT EXISTS violations (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        imageUri TEXT,
-        createdAt TEXT
-      );`,
-            [],
-            (_, result) => console.log("Table created or exists", result),
-            (_, error) => { console.log("Error creating table", error); return true; }
-        );
-    });
-};
 
 const CalendarScreen = ({ themeColors, t }) => (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
@@ -34,148 +21,99 @@ const CalendarScreen = ({ themeColors, t }) => (
     </View>
 );
 
-const MapScreen = ({ themeColors, t }) => (
-    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
-        <Text style={{ color: themeColors.text }}>{t('mapScreen')}</Text>
-    </View>
+const MapScreen = ({ region, setRegion }) => (
+    <MapView
+        style={{ flex: 1 }}
+        region={region}
+        onRegionChangeComplete={setRegion}
+    />
 );
 
 function NewScreen({ themeColors, t }) {
-    const [image, setImage] = useState(null);
-    const [fileName, setFileName] = useState(null);
-    const [list, setList] = useState([]);
+    const [image, setImage] = React.useState(null);
+    const [location, setLocation] = React.useState(null);
+    const [list, setList] = React.useState([]);
 
-    useEffect(() => {
-        initDB();
+    React.useEffect(() => {
+        createTable();
         loadData();
     }, []);
 
     const loadData = () => {
-        db.transaction(tx => {
-            tx.executeSql(
-                'SELECT * FROM violations;',
-                [],
-                (_, { rows }) => setList(rows._array),
-                (_, error) => { console.log("Select error", error); return true; }
-            );
+        fetchUsers(data => {
+            console.log('SQLite data loaded:', data);
+            data.forEach(item => {
+                console.log(`ID:${item.id} URL:${item.name} Lat:${item.latitude} Lng:${item.longitude}`);
+            });
+            setList(data || []);
         });
     };
 
-    const handleTakePhoto = async () => {
+    const takePhoto = async () => {
         const { status } = await ImagePicker.requestCameraPermissionsAsync();
         if (status !== 'granted') return;
-        const result = await ImagePicker.launchCameraAsync({ allowsEditing: true, aspect: [4,3], quality: 1 });
-        if (!result.canceled) {
-            const asset = result.assets[0];
-            setImage(asset.uri);
-            const name = asset.fileName || asset.uri.split('/').pop();
-            setFileName(name);
-        }
+
+        const photo = await ImagePicker.launchCameraAsync({ quality: 1 });
+        if (photo.canceled) return;
+
+        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+        setImage(photo.assets[0].uri);
+        setLocation({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
     };
 
-    const handlePickImage = async () => {
-        const { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
-        if (status !== 'granted') {
-            const { status: newStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-            if (newStatus !== 'granted') {
-                Alert.alert(
-                    'Permission required',
-                    'Sorry, we need gallery permissions to make this work! You can enable it in Settings.',
-                    [
-                        { text: 'Cancel', style: 'cancel' },
-                        { text: 'Open Settings', onPress: () => Linking.openSettings() }
-                    ]
-                );
-                return;
-            }
+    const saveToDB = async () => {
+        if (!image || !location) {
+            Alert.alert('Error', 'Photo or location missing');
+            return;
         }
-
-        const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: false,
-            allowsMultipleSelection: false,
-            aspect: [1, 1],
-            quality: 1,
-        });
-
-        if (!result.canceled) {
-            const asset = result.assets[0];
-            setImage(asset.uri);
-            const name = asset.fileName || asset.uri.split('/').pop();
-            setFileName(name);
-            console.log('Original file name:', name);
-        }
-    };
-
-    const saveToDB = () => {
-        if (!image) return;
-        const date = new Date().toISOString();
-        db.transaction(tx => {
-            tx.executeSql(
-                'INSERT INTO violations (imageUri, createdAt) VALUES (?, ?);',
-                [image, date],
-                () => { setImage(null); setFileName(null); loadData(); },
-                (_, error) => { console.log("Insert error", error); return true; }
-            );
-        });
-    };
-
-
-    const handleUploadImage = async () => {
-        if (!image || !fileName) return;
-
-        const formData = new FormData();
-        const extension = fileName.split('.').pop().toLowerCase();
-        let mimeType = 'image/jpeg';
-        if (extension === 'png') mimeType = 'image/png';
-        else if (extension === 'gif') mimeType = 'image/gif';
-        else if (extension === 'heic') mimeType = 'image/heic';
-        else if (extension === 'webp') mimeType = 'image/webp';
-
-        formData.append('file', { uri: image, name: fileName, type: mimeType });
-        formData.append('upload_preset', 'archive');
 
         try {
-            const response = await fetch('https://api.cloudinary.com/v1_1/dvf7vqr1s/upload', {
-                method: 'POST',
-                body: formData
-            });
+            const formData = new FormData();
+            formData.append('file', { uri: image, type: 'image/jpeg', name: 'photo.jpg' });
+            formData.append('upload_preset', 'archive');
+
+            const response = await fetch(
+                'https://api.cloudinary.com/v1_1/dvf7vqr1s/image/upload',
+                { method: 'POST', body: formData }
+            );
             const data = await response.json();
-            if (data.secure_url) {
-                console.log('Uploaded image URL:', data.secure_url);
-            } else {
-                console.log('Upload response:', data);
-            }
+            const imageUrl = data.secure_url || image;
+
+            console.log('Uploaded to Cloudinary:', imageUrl);
+            console.log('Photo coordinates:', location);
+
+            insertUser(imageUrl, location.latitude, location.longitude, loadData);
+
+            setImage(null);
+            setLocation(null);
         } catch (error) {
-            console.log('Upload error:', error);
+            console.error('Error saving photo:', error);
         }
     };
 
     return (
         <View style={[styles.container, { backgroundColor: themeColors.background }]}>
-            <Text style={{ color: themeColors.text, fontSize: 18, marginBottom: 10 }}>{t('newScreen')}</Text>
-            <Button title={t('takePhoto')} onPress={handleTakePhoto} />
-            <View style={{ height: 10 }} />
-            <Button title={t('pickImage')} onPress={handlePickImage} />
+            <Text style={{ color: themeColors.text, fontSize: 18 }}>{t('newScreen')}</Text>
+            <Button title={t('takePhoto')} onPress={takePhoto} />
             <View style={{ height: 10 }} />
             <Button title={t('saveToSQLite')} onPress={saveToDB} />
             {image && <Image source={{ uri: image }} style={styles.image} />}
-            {image && <View style={{ height: 10 }} />}
-            {image && <Button title="Upload to Cloudinary" onPress={handleUploadImage} />}
             <FlatList
                 data={list}
                 keyExtractor={item => item.id.toString()}
                 renderItem={({ item }) => (
                     <View style={{ marginTop: 15 }}>
-                        <Text style={{ color: themeColors.text }}>{item.createdAt}</Text>
-                        <Image source={{ uri: item.imageUri }} style={{ width: 150, height: 150 }} />
+                        <Image source={{ uri: item.name }} style={{ width: 200, height: 200 }} />
+                        <Text style={{ color: themeColors.text }}>
+                            ID: {item.id} Lat: {item.latitude} Lng: {item.longitude}
+                        </Text>
                     </View>
                 )}
             />
-            <StatusBar style="auto" />
         </View>
     );
 }
+
 
 
 const ProfileScreen = ({ themeColors, t }) => (
@@ -184,32 +122,11 @@ const ProfileScreen = ({ themeColors, t }) => (
     </View>
 );
 
-const ExitScreen = ({ navigation, themeColors, t }) => (
-    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
-        <Text style={{ color: themeColors.text }}>{t('exitScreen')}</Text>
-        <Button title={t('goBack')} onPress={() => navigation.goBack()} />
-    </View>
-);
-
-const BottomTabs = ({ themeColors, t }) => (
-    <Tab.Navigator screenOptions={{ headerShown: false }}>
-        <Tab.Screen name={t('calendarScreen')}>{() => <CalendarScreen themeColors={themeColors} t={t} />}</Tab.Screen>
-        <Tab.Screen name={t('mapScreen')}>{() => <MapScreen themeColors={themeColors} t={t} />}</Tab.Screen>
-        <Tab.Screen name={t('newScreen')}>{() => <NewScreen themeColors={themeColors} t={t} />}</Tab.Screen>
-    </Tab.Navigator>
-);
-
 const SettingsScreen = ({ themeColors, isDarkTheme, toggleTheme, language, switchLanguage, t }) => (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
-        <Text style={{ fontSize: 20, marginBottom: 10, color: themeColors.text }}>{t('settings')}</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 10 }}>
-            <Text style={{ color: themeColors.text }}>{t('darkTheme')}</Text>
-            <Switch value={isDarkTheme} onValueChange={toggleTheme} />
-        </View>
-        <View style={{ marginVertical: 10 }}>
-            <Text style={{ color: themeColors.text }}>{t('language')}: {language}</Text>
-            <Button title={t('switchLanguage')} onPress={switchLanguage} />
-        </View>
+        <Text style={{ color: themeColors.text }}>{t('settings')}</Text>
+        <Switch value={isDarkTheme} onValueChange={toggleTheme} />
+        <Button title={t('switchLanguage')} onPress={switchLanguage} />
     </View>
 );
 
@@ -217,7 +134,15 @@ export default function App() {
     const [isReady, setIsReady] = useState(false);
     const [isDarkTheme, setIsDarkTheme] = useState(false);
     const [language, setLanguage] = useState('en');
+
     const { t, i18n } = useTranslation();
+
+    const [region, setRegion] = useState({
+        latitude: 50.4501,
+        longitude: 30.5234,
+        latitudeDelta: 0.0922,
+        longitudeDelta: 0.0421
+    });
 
     useEffect(() => {
         const prepare = async () => {
@@ -230,27 +155,51 @@ export default function App() {
 
     if (!isReady) return null;
 
-    const toggleTheme = () => setIsDarkTheme(prev => !prev);
-
     const switchLanguage = async () => {
-        const newLang = language === 'en' ? 'uk' : language === 'uk' ? 'pl' : 'en';
+        const newLang = language === 'en' ? 'uk' : 'en';
         await changeLanguage(newLang);
         setLanguage(newLang);
     };
 
     const themeColors = isDarkTheme
-        ? { background: '#121212', text: '#ffffff' }
-        : { background: '#ffffff', text: '#000000' };
+        ? { background: '#121212', text: '#fff' }
+        : { background: '#fff', text: '#000' };
 
     return (
         <NavigationContainer theme={isDarkTheme ? DarkTheme : DefaultTheme}>
-            <Drawer.Navigator screenOptions={{ headerShown: true }}>
-                <Drawer.Screen name={t('home')}>{() => <BottomTabs themeColors={themeColors} t={t} />}</Drawer.Screen>
-                <Drawer.Screen name={t('profile')}>{() => <ProfileScreen themeColors={themeColors} t={t} />}</Drawer.Screen>
-                <Drawer.Screen name={t('settings')}>
-                    {() => <SettingsScreen themeColors={themeColors} isDarkTheme={isDarkTheme} toggleTheme={toggleTheme} language={language} switchLanguage={switchLanguage} t={t} />}
+            <Drawer.Navigator>
+                <Drawer.Screen name={t('home')}>
+                    {() => (
+                        <Tab.Navigator screenOptions={{ headerShown: false }}>
+                            <Tab.Screen name={t('calendarScreen')}>
+                                {() => <CalendarScreen themeColors={themeColors} t={t} />}
+                            </Tab.Screen>
+                            <Tab.Screen name={t('mapScreen')}>
+                                {() => <MapScreen region={region} setRegion={setRegion} />}
+                            </Tab.Screen>
+                            <Tab.Screen name={t('newScreen')}>
+                                {() => <NewScreen themeColors={themeColors} t={t} />}
+                            </Tab.Screen>
+                        </Tab.Navigator>
+                    )}
                 </Drawer.Screen>
-                <Drawer.Screen name={t('exit')}>{() => <ExitScreen themeColors={themeColors} t={t} />}</Drawer.Screen>
+
+                <Drawer.Screen name={t('profile')}>
+                    {() => <ProfileScreen themeColors={themeColors} t={t} />}
+                </Drawer.Screen>
+
+                <Drawer.Screen name={t('settings')}>
+                    {() => (
+                        <SettingsScreen
+                            themeColors={themeColors}
+                            isDarkTheme={isDarkTheme}
+                            toggleTheme={() => setIsDarkTheme(p => !p)}
+                            language={language}
+                            switchLanguage={switchLanguage}
+                            t={t}
+                        />
+                    )}
+                </Drawer.Screen>
             </Drawer.Navigator>
         </NavigationContainer>
     );
@@ -259,4 +208,5 @@ export default function App() {
 const styles = StyleSheet.create({
     container: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 10 },
     image: { width: 300, height: 300, marginTop: 20 },
+    map: { width: 300, height: 300, flex: 1 },
 });

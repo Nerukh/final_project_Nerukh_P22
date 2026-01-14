@@ -14,5 +14,12 @@
   "switchLanguage": "Zmień język",
   "takePhoto": "Zrób zdjęcie",
   "pickImage": "Wybierz z galerii",
-  "saveToSQLite": "Zapisz do SQLite"
+  "saveToSQLite": "Zapisz do SQLite",
+  "addMarker": "Dodaj marker",
+  "tapOnMap": "Dotknij mapy...",
+  "zoomIn": "Powiększ",
+  "zoomOut": "Pomniejsz",
+  "markerTitle": "Marker",
+  "markerDescription": "Szerokość: {{lat}}, Długość: {{lng}}",
+  "selectedCoordinates": "Wybrane współrzędne"
 }
