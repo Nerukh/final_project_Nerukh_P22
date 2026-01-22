@@ -21,5 +21,14 @@
   "zoomOut": "Pomniejsz",
   "markerTitle": "Marker",
   "markerDescription": "Szerokość: {{lat}}, Długość: {{lng}}",
-  "selectedCoordinates": "Wybrane współrzędne"
+  "selectedCoordinates": "Wybrane współrzędne",
+  "login": "Logowanie",
+  "register": "Rejestracja",
+  "email": "Email",
+  "password": "Hasło",
+  "confirmPassword": "Potwierdź hasło",
+  "fillAllFields": "Wypełnij wszystkie pola",
+  "passwordsNotMatch": "Hasła nie są takie same",
+  "loginSuccess": "Zalogowano pomyślnie",
+  "registerSuccess": "Rejestracja zakończona sukcesem"
 }

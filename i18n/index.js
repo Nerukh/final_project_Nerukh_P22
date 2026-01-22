@@ -22,7 +22,7 @@ const getDeviceLanguage = async () => {
 };
 
 export const initI18n = async () => {
-    const deviceLang = getDeviceLanguage();
+    const deviceLang = await getDeviceLanguage();
     const initialLang = config.SUPPORTED_LANGUAGES.includes(deviceLang)
         ? deviceLang
         : config.DEFAULT_LANGUAGE;
@@ -39,16 +39,12 @@ export const initI18n = async () => {
 
 export const changeLanguage = async (lang) => {
     try {
-        if (!config.SUPPORTED_LANGUAGES.includes(lang)) {
-            throw new Error(`Language ${lang} is not supported`)
-        }
-        await i18next.changeLanguage(lang);
+        if (!config.SUPPORTED_LANGUAGES.includes(lang)) return;
         await AsyncStorage.setItem(config.APP_LANGUAGE, lang);
-        if (__DEV__) {
-            console.log(`Language changed to: ${lang}`)
-        }
+        await i18next.changeLanguage(lang);
+        if (__DEV__) console.log(`Language saved and changed to: ${lang}`);
     } catch (error) {
-        console.error('Failed to change language', error)
+        console.error('Failed to change language', error);
     }
 }
 
@@ -66,3 +62,5 @@ export const loadLanguage = async () => {
         console.error('Failed to load language', error)
     }
 }
+
+export default i18next;

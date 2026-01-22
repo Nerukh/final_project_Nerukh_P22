@@ -21,5 +21,14 @@
   "zoomOut": "Zoom Out",
   "markerTitle": "Marker",
   "markerDescription": "Latitude: {{lat}}, Longitude: {{lng}}",
-  "selectedCoordinates": "Selected Coordinates"
+  "selectedCoordinates": "Selected Coordinates",
+  "login": "Login",
+  "register": "Register",
+  "email": "Email",
+  "password": "Password",
+  "confirmPassword": "Confirm password",
+  "fillAllFields": "Fill all fields",
+  "passwordsNotMatch": "Passwords do not match",
+  "loginSuccess": "Login successful",
+  "registerSuccess": "Registration successful"
 }

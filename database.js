@@ -1,71 +1,59 @@
-import * as SQLite from "expo-sqlite";
+import * as SQLite from 'expo-sqlite';
 
-export const openDatabase = async () => {
-    return await SQLite.openDatabaseAsync('mydatabase.db');
-}
+const db = SQLite.openDatabaseSync('mydatabase.db');
 
-export const createTable = async () => {
-    const database = await openDatabase();
-    try {
-        await database.execAsync(`
-            PRAGMA journal_mode = WAL;
-            create table if not exists users(
-                id integer primary key autoincrement,
-                name text not null
-            );
-        `);
-        console.log('Table created')
-    } catch (error) {
-        console.error("Error creating table:", error)
-    }
-}
+export const initDB = () => {
+  try {
+    db.execSync(`
+      CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT UNIQUE,
+        password TEXT
+      );
+    `);
 
-export const insertUser = async (name) => {
-    if (!name) {
-        return;
-    }
-    const database = await openDatabase();
-    try {
-        const result = await database.runAsync('insert into users (name) values (?)', name);
-        console.log('User inserted with id:', result.lastInsertRowId);
-    } catch (error) {
-        console.error('Error insert user:', error);
-    }
-}
-
-export const fetchUsers = async () => {
-    const database = await openDatabase();
-    try {
-        const allRows = await database.getAllAsync('select * from users');
-        console.log('All Users:', allRows);
-        return allRows;
-    } catch (error) {
-        console.error('Error fetching users:', error)
-    }
+    db.execSync(`
+      CREATE TABLE IF NOT EXISTS photos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        image TEXT,
+        latitude REAL,
+        longitude REAL,
+        created_at TEXT,
+        user_id INTEGER
+      );
+    `);
+    console.log('Database & Tables initialized');
+  } catch (error) {
+    console.error('Init DB error:', error);
+  }
 };
 
-export const updateUser = async (id, name) => {
-    if (!id || !name) {
-        return;
-    }
-    const database = await openDatabase();
-    try {
-        const res = await database.runAsync('update users set name = ? where id = ?', name, id)
-        console.log('User updated: ', res);
-    } catch (error) {
-        console.error('Error updating user: ', error)
-    }
-}
+export const registerUser = async (email, password) => {
+  const result = await db.runAsync('INSERT INTO users (email, password) VALUES (?, ?)', [email, password]);
+  return result.lastInsertRowId;
+};
 
-export const deleteUser = async (id) => {
-    const database = await openDatabase();
-    // if (!id) {
-    //     return;
-    // }
-    try {
-        const result = await database.runAsync('delete from users where id = ?', id);
-        console.log('User deleted:', result);
-    } catch (error) {
-        console.error('Error deleting users: ', error)
-    }
-}
+export const loginUser = async (email, password) => {
+  try {
+    const user = await db.getFirstAsync(
+      'SELECT * FROM users WHERE email = ? AND password = ?',
+      [email, password]
+    );
+    return user;
+  } catch (error) {
+    console.error('Login error:', error);
+    return null;
+  }
+};
+
+
+export const insertPhoto = async ({ image, latitude, longitude, created_at, user_id }) => {
+  return await db.runAsync(
+    'INSERT INTO photos (image, latitude, longitude, created_at, user_id) VALUES (?, ?, ?, ?, ?)',
+    [image, latitude, longitude, created_at, user_id]
+  );
+};
+
+export const getPhotos = async (user_id) => {
+  return await db.getAllAsync('SELECT * FROM photos WHERE user_id = ? ORDER BY id DESC', [user_id]);
+};

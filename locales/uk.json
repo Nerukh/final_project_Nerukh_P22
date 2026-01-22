@@ -21,5 +21,14 @@
   "zoomOut": "Зменшити",
   "markerTitle": "Маркер",
   "markerDescription": "Широта: {{lat}}, Довгота: {{lng}}",
-  "selectedCoordinates": "Вибрані координати"
+  "selectedCoordinates": "Вибрані координати",
+  "login": "Вхід",
+  "register": "Реєстрація",
+  "email": "Електронна пошта",
+  "password": "Пароль",
+  "confirmPassword": "Підтвердити пароль",
+  "fillAllFields": "Заповніть усі поля",
+  "passwordsNotMatch": "Паролі не співпадають",
+  "loginSuccess": "Успішний вхід",
+  "registerSuccess": "Реєстрація успішна"
 }
