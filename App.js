@@ -1,11 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Button, StyleSheet, Switch, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createDrawerNavigator } from '@react-navigation/drawer';
-import { Picker } from '@react-native-picker/picker';
 import { useTranslation } from 'react-i18next';
-import { changeLanguage, initI18n } from './i18n';
+import { changeLanguage, initI18n, loadLanguage } from './i18n';
 import CalendarScreen from './Screen/CalendarScreen';
 import MapScreen from './Screen/MapScreen';
 import NewScreen from './Screen/NewScreen';
@@ -24,80 +23,80 @@ export default function App() {
 
   const { t, i18n } = useTranslation();
 
-  const [region, setRegion] = useState({
-    latitude: 50.4501,
-    longitude: 30.5234,
-    latitudeDelta: 0.0922,
-    longitudeDelta: 0.0421,
-  });
-
   useEffect(() => {
     const prepare = async () => {
-      console.log("Starting DB initialization...");
-      initDB();
-      await initI18n();
-      await loadLanguage();
-      if (i18n && i18n.language) {
-                setLanguage(i18n.language);
-              }
-      setIsReady(true);
+      try {
+        console.log("Starting DB initialization...");
+        await initDB();
+        await initI18n();
+        await loadLanguage();
+
+        if (i18n && i18n.language) {
+          setLanguage(i18n.language);
+        }
+      } catch (e) {
+        console.error("Initialization error:", e);
+      } finally {
+        setTimeout(() => setIsReady(true), 500);
+      }
     };
     prepare();
   }, []);
 
-  if (!isReady) return null;
-
-  const switchLanguage = async () => {
-    const newLang = language === 'en' ? 'uk' : 'pl';
-    await changeLanguage(newLang);
-    setLanguage(newLang);
-  };
+  if (!isReady) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: isDarkTheme ? '#121212' : '#fff' }}>
+        <ActivityIndicator size="large" color="#007AFF" />
+        <Text style={{ marginTop: 10, color: isDarkTheme ? '#fff' : '#000' }}>Завантаження...</Text>
+      </View>
+    );
+  }
 
   const themeColors = isDarkTheme
     ? { background: '#121212', text: '#fff' }
     : { background: '#fff', text: '#000' };
 
   return (
-  <AuthProvider>
-    <NavigationContainer theme={isDarkTheme ? DarkTheme : DefaultTheme}>
-      <Drawer.Navigator>
-        <Drawer.Screen name={t('profile')}>
-            {(props) => <ProfileScreen {...props} themeColors={themeColors} t={t} />}
-        </Drawer.Screen>
+    <AuthProvider>
+      <NavigationContainer theme={isDarkTheme ? DarkTheme : DefaultTheme}>
+        <Drawer.Navigator screenOptions={{ headerStyle: { backgroundColor: themeColors.background }, headerTintColor: themeColors.text }}>
+          <Drawer.Screen name={t('home')}>
+            {() => (
+              <Tab.Navigator screenOptions={{ headerShown: false }}>
+                <Tab.Screen name={t('calendarScreen')}>
+                  {() => <CalendarScreen themeColors={themeColors} t={t} />}
+                </Tab.Screen>
 
-        <Drawer.Screen name={t('home')}>
-          {() => (
-            <Tab.Navigator screenOptions={{ headerShown: false }}>
-              <Tab.Screen name={t('calendarScreen')}>
-                {() => <CalendarScreen themeColors={themeColors} t={t} />}
-              </Tab.Screen>
+                <Tab.Screen name={t('mapScreen')}>
+                  {() => <MapScreen themeColors={themeColors} />}
+                </Tab.Screen>
 
-              <Tab.Screen name={t('mapScreen')}>
-                {() => <MapScreen region={region} setRegion={setRegion} />}
-              </Tab.Screen>
+                <Tab.Screen name={t('newScreen')}>
+                  {() => <NewScreen themeColors={themeColors} t={t} />}
+                </Tab.Screen>
+              </Tab.Navigator>
+            )}
+          </Drawer.Screen>
 
-              <Tab.Screen name={t('newScreen')}>
-                {() => <NewScreen themeColors={themeColors} t={t} />}
-              </Tab.Screen>
-            </Tab.Navigator>
-          )}
-        </Drawer.Screen>
+          <Drawer.Screen name={t('profile')}>
+              {(props) => <ProfileScreen {...props} themeColors={themeColors} t={t} />}
+          </Drawer.Screen>
 
-        <Drawer.Screen name={t('settings')}>
-          {() => (
-            <SettingsScreen
-              themeColors={themeColors}
-              isDarkTheme={isDarkTheme}
-              toggleTheme={() => setIsDarkTheme(p => !p)}
-              language={language}
-              switchLanguage={switchLanguage}
-              t={t}
-            />
-          )}
-        </Drawer.Screen>
-      </Drawer.Navigator>
-    </NavigationContainer>
-  </AuthProvider>
+          <Drawer.Screen name={t('settings')}>
+            {() => (
+              <SettingsScreen
+                themeColors={themeColors}
+                isDarkTheme={isDarkTheme}
+                toggleTheme={() => setIsDarkTheme(p => !p)}
+                language={language}
+                setLanguage={setLanguage}
+                t={t}
+              />
+            )}
+          </Drawer.Screen>
+        </Drawer.Navigator>
+      </NavigationContainer>
+    </AuthProvider>
   );
 }
 

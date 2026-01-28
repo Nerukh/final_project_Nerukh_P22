@@ -41,20 +41,31 @@ const savePhoto = async () => {
     try {
       console.log('Початок збереження...');
 
-      // 1. Перевірка дозволів
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Помилка', 'Дозвольте доступ до локації в налаштуваннях!');
+        alert('Помилка: Дозвольте доступ до локації!');
         return;
       }
 
       console.log('Отримання координат...');
-      const loc = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
+      let loc = null;
 
-      console.log('Координати отримано:', loc.coords.latitude, loc.coords.longitude);
+      try {
+        loc = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+          timeout: 5000,
+        });
+      } catch (e) {
+        console.log('GPS недоступний, використовуємо дефолтні координати (SF)');
+        loc = {
+          coords: {
+            latitude: 37.7749,
+            longitude: -122.4194,
+          }
+        };
+      }
 
+      console.log('Координати для запису:', loc.coords.latitude, loc.coords.longitude);
 
       await insertPhoto({
         image: tempImage,
@@ -65,15 +76,14 @@ const savePhoto = async () => {
       });
 
       console.log('Записано в SQLite успішно!');
-
       setTempImage(null);
       load();
 
     } catch (error) {
       console.error('Помилка при збереженні:', error);
-      Alert.alert('Помилка', 'Не вдалося зберегти фото: ' + error.message);
+      alert('Помилка: ' + error.message);
     }
-  };
+};
 
   if (!user) {
     return <View style={styles.center}><Text>Увійдіть, щоб додавати фото</Text></View>;
@@ -89,10 +99,21 @@ const savePhoto = async () => {
           <Image source={{ uri: tempImage }} style={styles.previewImage} />
           <Button title="ЗБЕРЕГТИ ФОТО У БАЗУ" color="green" onPress={savePhoto} />
           <Button title="Скасувати" color="red" onPress={() => setTempImage(null)} />
-          <Text style={styles.coordsText}>Lat: {item.latitude?.toFixed(4)}</Text>
-          <Text style={styles.coordsText}>Lng: {item.longitude?.toFixed(4)}</Text>
         </View>
       )}
+
+      <Text style={styles.title}>Ваші правопорушення:</Text>
+      <FlatList
+        data={photos}
+        keyExtractor={(item) => item.id.toString()}
+        renderItem={({ item }) => (
+          <View style={styles.photoItem}>
+            <Image source={{ uri: item.image }} style={styles.image} />
+            <Text>Lat: {item.latitude.toFixed(4)}, Lng: {item.longitude.toFixed(4)}</Text>
+            <Text style={styles.date}>{new Date(item.created_at).toLocaleString()}</Text>
+          </View>
+        )}
+      />
     </View>
   );
 }
